@@ -20,53 +20,21 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
+// sensors are initialized, and sensor values are computed and yaw is displayed on the graphview
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
-
-    private SensorManager mSensorManager = null;
-
-    // angular speeds from gyro
-    private float[] gyro = new float[3];
-
-    // rotation matrix from gyro data
-    private float[] gyroMatrix = new float[9];
-
-    // orientation angles from gyro matrix
-    private float[] gyroOrientation = new float[3];
-
-    // magnetic field vector
-    private float[] magnet = new float[3];
-
-    // accelerometer vector
-    private float[] accel = new float[3];
-
-    // orientation angles from accel and magnet
-    private float[] accMagOrientation = new float[3];
-
-    // final orientation angles from sensor fusion
-    private float[] fusedOrientation = new float[3];
-
-    // accelerometer and magnetometer based rotation matrix
-    private float[] rotationMatrix = new float[9];
 
     // for gryo
     public static final float EPSILON = 0.000000001f;
-    private static final float NS2S = 1.0f / 1000000000.0f;
-    private float timestamp;
-    private boolean initState = true;
-
     // for timer - sensor fusion, computing every 10 sec
     public static final int TIME_CONSTANT = 10;
-    private Timer fuseTimer = new Timer();
+    private static final float NS2S = 1.0f / 1000000000.0f;
     TextView sPitch, sRoll, sYaw;
     TextView qPitch, qRoll, qYaw;
     int count = 0;
     float pitchOut, rollOut, yawOut;
-
     float[] mMagneticField;
     float[] mGravity;
     DecimalFormat d = (DecimalFormat) NumberFormat.getNumberInstance(Locale.ENGLISH);
-    private boolean sensorChange = false;
-    
     // for calibration
     Float getPitch = 0f;
     Float getRoll = 0f;
@@ -75,7 +43,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     Float getRollQ = 0f;
     Float getYawQ = 0f;
     GraphView graph;
-    
     // normal - sensor fusion, Q - denotes quaternion
     Float newPitchOut;
     Float newRollOut;
@@ -87,6 +54,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     float mPitch, mRoll, mYaw;
     // line graph
     LineGraphSeries<DataPoint> seriesPitch, seriesRoll, seriesYaw;
+    private SensorManager mSensorManager = null;
+    // angular speeds from gyro
+    private float[] gyro = new float[3];
+    // rotation matrix from gyro data
+    private float[] gyroMatrix = new float[9];
+    // orientation angles from gyro matrix
+    private float[] gyroOrientation = new float[3];
+    // magnetic field vector
+    private float[] magnet = new float[3];
+    // accelerometer vector
+    private float[] accel = new float[3];
+    // orientation angles from accel and magnet
+    private float[] accMagOrientation = new float[3];
+    // final orientation angles from sensor fusion
+    private float[] fusedOrientation = new float[3];
+    // accelerometer and magnetometer based rotation matrix
+    private float[] rotationMatrix = new float[9];
+    private float timestamp;
+    private boolean initState = true;
+    private Timer fuseTimer = new Timer();
+    private boolean sensorChange = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,13 +119,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // get sensorManager and initialise sensor listeners
         mSensorManager = (SensorManager) this.getSystemService(SENSOR_SERVICE);
         initListeners();
-        
-        // wait for one second until gyroscope and magnetometer/accelerometer
-        // data is initialised then scedule the complementary filter task
+
+        // waiting for one second until gyroscope and magnetometer/accelerometer
+        // data is initialised then sceduling the complementary filter task
         fuseTimer.scheduleAtFixedRate(new calculateFusedOrientationTask(),
                 1000, TIME_CONSTANT);
     }
 
+    // initializing sensors
     public void initListeners() {
         mSensorManager.registerListener(this,
                 mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
@@ -157,6 +146,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    // when there is change in the sensors
     public void onSensorChanged(SensorEvent event) {
         sensorChange = true;
         updateValues();
@@ -216,6 +206,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    // updating the display and values
     private void updateValues() {
         if (!displayPitch.equals("") && !displayRoll.equals("") && !displayYaw.equals("")) {
             sPitch.setText(displayPitch);
@@ -225,12 +216,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             qRoll.setText(d.format(newRollOutQ) + " rad/s");
             qYaw.setText(d.format(newYawOutQ) + " rad/s");
             count++;
-            
+
             // graph series
             seriesPitch.appendData(new DataPoint(count++, newPitchOut), false, 500);
             seriesRoll.appendData(new DataPoint(count++, newRollOut), false, 500);
             seriesYaw.appendData(new DataPoint(count++, newYawOut), false, 500);
 
+            // setting colors
             seriesPitch.setColor(Color.RED);
             seriesRoll.setColor(Color.BLUE);
             seriesYaw.setColor(Color.GREEN);
